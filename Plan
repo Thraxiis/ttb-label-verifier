@@ -1,0 +1,24 @@
+ttb-label-verifier/
+├── app/
+│   ├── api/
+│   │   └── verify/
+│   │       └── route.ts          # Anthropic proxy endpoint
+│   ├── layout.tsx                # Root layout, fonts, metadata
+│   ├── page.tsx                  # Single-page app shell
+│   └── globals.css               # Tailwind base + custom vars
+├── components/
+│   ├── UploadPanel.tsx           # Image drop zone + form fields
+│   ├── ResultsPanel.tsx          # Pass/fail card + field rows
+│   └── BatchPanel.tsx            # Batch queue UI (slice 4)
+├── lib/
+│   ├── types.ts                  # Shared TS types (VerificationResult, etc.)
+│   └── verify.ts                 # Client-side fetch wrapper for /api/verify
+├── public/
+│   └── (static assets)
+├── .env.local                    # ANTHROPIC_API_KEY (never committed)
+├── .env.example                  # Template for contributors
+├── .gitignore
+├── next.config.ts
+├── tailwind.config.ts
+├── tsconfig.json
+└── package.json
