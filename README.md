@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TTB Label Verifier
 
-## Getting Started
+An AI-powered prototype for verifying alcohol beverage labels against TTB (Alcohol and Tobacco Tax and Trade Bureau) application form data.
 
-First, run the development server:
+**Live demo:** https://ttb-label-verifier-snowy.vercel.app
+
+---
+
+## Setup & Run Instructions
+
+### Prerequisites
+- Node.js 18+
+- An Anthropic API key (console.anthropic.com)
+
+### Local development
 
 ```bash
+# Clone the repo
+git clone https://github.com/Thraxiis/ttb-label-verifier.git
+cd ttb-label-verifier
+
+# Install dependencies
+npm install
+
+# Create your environment file
+# Create a file named .env.local in the project root with:
+# ANTHROPIC_API_KEY=sk-ant-your-key-here
+
+# Start the dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Deploy to Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm i -g vercel
+vercel
+vercel --prod
+```
 
-## Learn More
+Add `ANTHROPIC_API_KEY` as an environment variable in your Vercel project settings before deploying.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## How to Use
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Upload a label image (JPG or PNG) using the drop zone or file browser
+2. Enter the corresponding application form field values
+3. Click **Analyze label**
+4. Review the per-field verification results on the right
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Approach & Tools
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Stack
+- **Next.js 15** (App Router) — full-stack framework; API routes proxy the Anthropic key server-side so it is never exposed to the browser
+- **TypeScript** — shared types across the API route, client fetch wrapper, and all components
+- **Tailwind CSS** — utility-first styling
+- **Anthropic Claude claude-sonnet-4-6** — vision model for label image extraction and field comparison
+- **Vercel** — deployment
+
+### How verification works
+
+Each verification is a single API call to Claude with two inputs: the label image (base64-encoded, resized to a 1120px max dimension before sending) and the application form field values. Claude extracts all visible fields from the label image, compares them against the provided form values, and returns a structured JSON result with per-field match statuses and a dedicated government warning check.
+
+Match statuses follow TTB compliance logic:
+- **Pass** — values match exactly or are clearly equivalent (e.g. `750 mL` vs `750ml`, `USA` vs `United States`)
+- **Needs review** — minor variant likely requiring agent judgment (e.g. capitalization differences like `OLD TOM` vs `Old Tom`)
+- **Fail** — substantive mismatch or required element is wrong
+- **Missing** — field not found on label
+
+The government warning is checked separately with strict rules: `GOVERNMENT WARNING:` must appear in all-caps bold, followed by the standard two-part warning statement word-for-word.
+
+### Image handling
+
+Label images are resized client-side to a 1120px maximum dimension and converted to JPEG before sending to the API. This reduces payload size while preserving enough resolution for Claude to read label text reliably.
+
+---
+
+## Assumptions & Trade-offs
+
+| Decision | Rationale |
+|---|---|
+| Single API call per label | Simplest path to a working result; avoids multi-step orchestration |
+| No persistent storage | Prototype scope; results live in React state for the session only |
+| No COLA integration | Out of scope per project brief |
+| Fuzzy match logic in prompt | Simpler than string-distance libraries for MVP; Claude handles common variants well |
+| ~8–10s response time | Vision calls with detailed extraction take longer than text-only; streaming is implemented so the request doesn't time out, but the full result still renders at once |
+| Batch upload not implemented | Core single-label flow prioritized for prototype; batch orchestration would reuse the same API route in a concurrent queue |
+
+---
+
+## Known Limitations
+
+- Response time is 8–10 seconds per label due to vision model processing time
+- No batch upload in current prototype
+- No persistent audit log of verifications
+- Government warning bold detection relies on Claude's visual interpretation, which may vary with image quality
